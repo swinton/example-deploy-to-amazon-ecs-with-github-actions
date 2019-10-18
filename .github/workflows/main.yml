@@ -40,19 +40,19 @@ jobs:
         export AWS_REGION=$( aws configure get default.region )
         # Build and tag the image
         docker build \
-          -t blog:$GITHUB_SHA \
+          -t jekyll-contained:$GITHUB_SHA \
           -t $GITHUB_REPOSITORY:$GITHUB_SHA \
-          -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/blog:$GITHUB_SHA .
+          -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/jekyll-contained:$GITHUB_SHA .
         # Save the image so it can be uploaded as an artifact
-        docker save blog:$GITHUB_SHA | gzip > ./blog.tar.gz
+        docker save jekyll-contained:$GITHUB_SHA | gzip > ./jekyll-contained.tar.gz
         # Push image to AWS ECR
-        docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/blog:$GITHUB_SHA
+        docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/jekyll-contained:$GITHUB_SHA
 
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
       with:
         name: docker-image
-        path: ./blog.tar.gz
+        path: ./jekyll-contained.tar.gz
 
     - name: Build, deploy task definition
       run: |
