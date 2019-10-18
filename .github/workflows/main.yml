@@ -1,0 +1,17 @@
+on:
+  [push, pull_request]
+
+name: Deploy blog to ECS
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+    - name: Build container
+      run: |
+        docker build -t blog .
+    # - name: Setup AWS and grab ECR creds
+    # - name: Build, tag, push container to ECR
+    # - name: Build, deploy task definition
+    # - name: Report cluster status
