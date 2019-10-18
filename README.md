@@ -2,7 +2,7 @@
 
 > :package: A contained version of [Jekyll](https://jekyllrb.com/).
 
-<a href="https://github.com/swinton/jekyll-contained"><img alt="GitHub Actions status" src="https://github.com/swinton/jekyll-contained/workflows/Deploy%20blog%20to%20ECS/badge.svg"></a>
+<a href="https://github.com/swinton/jekyll-contained"><img alt="GitHub Actions status" src="https://github.com/swinton/jekyll-contained/workflows/Build/badge.svg"></a>
 
 ![jekyll-contained](https://user-images.githubusercontent.com/27806/67113157-6c8fc900-f19e-11e9-92ab-4106ef5ad22d.png)
 

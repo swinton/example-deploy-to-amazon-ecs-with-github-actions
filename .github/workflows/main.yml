@@ -1,11 +1,11 @@
 on:
   [push, pull_request]
 
-name: Deploy blog to ECS
+name: Build
 
 jobs:
-  deploy:
-    name: Deploy
+  build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
