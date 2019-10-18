@@ -7,14 +7,11 @@ A contained version of Jekyll.
 ## Usage
 
 ```shell
-# First setup the site
-./script/setup.sh
+# Build the container image
+docker build -t blog .
 
-# Then build the site
-./script/build.sh
-
-# Now serve the site
-./script/serve.sh
+# Run the container
+docker run --name myblog --rm -p 3000:4000 -it blog  # Blog will be running at http://localhost:3000/
 ```
 
 ## Inspiration
