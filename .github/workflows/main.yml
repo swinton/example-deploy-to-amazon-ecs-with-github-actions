@@ -8,8 +8,15 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
+    - name: Context
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: |
+        echo "$GITHUB_CONTEXT"
+
     - name: Checkout
       uses: actions/checkout@v1.0.0
+
     - name: Setup AWS
       env:
         AWS_REGION: eu-west-1
@@ -24,10 +31,33 @@ jobs:
         aws sts get-caller-identity
         # Login to AWS ECR
         $( aws ecr get-login --region $AWS_REGION --no-include-email )
-    - name: Build container
+
+    - name: Build, tag, and push image
       run: |
-        docker build -t blog .
-    # - name: Setup AWS and grab ECR creds
-    # - name: Build, tag, push container to ECR
-    # - name: Build, deploy task definition
-    # - name: Report cluster status
+        # Configure environment to use the runner's AWS config
+        export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
+        export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
+        export AWS_REGION=$( aws configure get default.region )
+        # Build and tag the image
+        docker build \
+          -t blog:$GITHUB_SHA \
+          -t $GITHUB_REPOSITORY:$GITHUB_SHA \
+          -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/blog:$GITHUB_SHA .
+        # Save the image so it can be uploaded as an artifact
+        docker save blog:$GITHUB_SHA | gzip > ./blog.tar.gz
+        # Push image to AWS ECR
+        docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/blog:$GITHUB_SHA
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: docker-image
+        path: ./blog.tar.gz
+
+    - name: Build, deploy task definition
+      run: |
+        echo TODO
+
+    - name: Report cluster status
+      run: |
+        echo TODO
