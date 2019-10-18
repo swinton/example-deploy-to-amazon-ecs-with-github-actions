@@ -2,6 +2,8 @@
 
 A contained version of Jekyll.
 
+![jekyll-contained](https://user-images.githubusercontent.com/27806/67113157-6c8fc900-f19e-11e9-92ab-4106ef5ad22d.png)
+
 ## Usage
 
 ```shell
