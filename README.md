@@ -1,5 +1,7 @@
 # `jekyll-contained`
 
+A contained version of Jekyll.
+
 ## Usage
 
 ```shell
@@ -15,4 +17,4 @@
 
 ## Inspiration
 
-https://ddewaele.github.io/running-jekyll-in-docker/
+:sparkles: [Running Jekyll in Docker – Davy's Tech Blog](https://ddewaele.github.io/running-jekyll-in-docker/) :sparkles:
