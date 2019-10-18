@@ -10,6 +10,20 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v1.0.0
+    - name: Setup AWS
+      env:
+        AWS_REGION: eu-west-1
+      run: |
+        mkdir "${RUNNER_TEMP}/.aws"
+        export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
+        export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
+        aws configure set default.region $AWS_REGION
+        aws configure set default.output json
+        aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws sts get-caller-identity
+        # Login to AWS ECR
+        $( aws ecr get-login --region $AWS_REGION --no-include-email )
     - name: Build container
       run: |
         docker build -t blog .
