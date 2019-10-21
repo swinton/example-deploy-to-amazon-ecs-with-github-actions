@@ -32,27 +32,27 @@ jobs:
         # Login to AWS ECR
         $( aws ecr get-login --region $AWS_REGION --no-include-email )
 
-    # - name: Build, tag, and push image
-    #   run: |
-    #     # Configure environment to use the runner's AWS config
-    #     export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
-    #     export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
-    #     export AWS_REGION=$( aws configure get default.region )
-    #     # Build and tag the image
-    #     docker build \
-    #       -t jekyll-contained:$GITHUB_SHA \
-    #       -t $GITHUB_REPOSITORY:$GITHUB_SHA \
-    #       -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/jekyll-contained:$GITHUB_SHA .
-    #     # Save the image so it can be uploaded as an artifact
-    #     docker save jekyll-contained:$GITHUB_SHA | gzip > ./jekyll-contained.tar.gz
-    #     # Push image to AWS ECR
-    #     docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/jekyll-contained:$GITHUB_SHA
+    - name: Build, tag, and push image
+      run: |
+        # Configure environment to use the runner's AWS config
+        export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
+        export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
+        export AWS_REGION=$( aws configure get default.region )
+        # Build and tag the image
+        docker build \
+          -t jekyll-contained:$GITHUB_SHA \
+          -t $GITHUB_REPOSITORY:$GITHUB_SHA \
+          -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/jekyll-contained:$GITHUB_SHA .
+        # Save the image so it can be uploaded as an artifact
+        docker save jekyll-contained:$GITHUB_SHA | gzip > ./jekyll-contained.tar.gz
+        # Push image to AWS ECR
+        docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/jekyll-contained:$GITHUB_SHA
 
-    # - name: Upload artifact
-    #   uses: actions/upload-artifact@v1.0.0
-    #   with:
-    #     name: docker-image
-    #     path: ./jekyll-contained.tar.gz
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: docker-image
+        path: ./jekyll-contained.tar.gz
 
     - name: Build, deploy task definition
       run: |
@@ -66,6 +66,9 @@ jobs:
           | jq '.taskDefinition.containerDefinitions[0].image |= env.IMAGE' \
           > "${RUNNER_TEMP}/task-definition.json"
         cat "${RUNNER_TEMP}/task-definition.json"
+        # Register the new task-definition
+        aws ecs register-task-definition --family ${{ secrets.AWS_ECS_TASK_DEFN_FAMILY }} \
+          --cli-input-json file://"${RUNNER_TEMP}/task-definition.json"
 
     - name: Report cluster status
       run: |
