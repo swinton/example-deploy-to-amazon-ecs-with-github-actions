@@ -62,9 +62,9 @@ jobs:
         export AWS_REGION=$( aws configure get default.region )
         # Update task-definition with new image
         export IMAGE=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/jekyll-contained:$GITHUB_SHA
-        aws ecs describe-task-definition --task-definition ${{ secrets.AWS_ECS_TASK_DEFN_FAMILY }} \
-          | jq '.taskDefinition.containerDefinitions[0].image |= $ENV.IMAGE' \
-          > "${RUNNER_TEMP}/task-definition.json"
+        aws ecs describe-task-definition --task-definition ${{ secrets.AWS_ECS_TASK_DEFN_FAMILY }} | \
+          jq '.taskDefinition.containerDefinitions[0].image |= $ENV.IMAGE' > \
+          "${RUNNER_TEMP}/task-definition.json"
         # Update task-definition with new image
         cat "${RUNNER_TEMP}/task-definition.json"
 
