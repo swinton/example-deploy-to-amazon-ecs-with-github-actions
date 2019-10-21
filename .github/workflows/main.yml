@@ -56,6 +56,10 @@ jobs:
 
     - name: Build, deploy task definition
       run: |
+        # Configure environment to use the runner's AWS config
+        export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
+        export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
+        export AWS_REGION=$( aws configure get default.region )
         # Describe latest task-defintion
         aws ecs describe-task-definition --task-definition ${{ secrets.AWS_ECS_TASK_DEFN_FAMILY }}
 
