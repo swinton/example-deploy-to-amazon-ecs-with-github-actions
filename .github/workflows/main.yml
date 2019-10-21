@@ -65,7 +65,7 @@ jobs:
         aws ecs describe-task-definition --task-definition ${{ secrets.AWS_ECS_TASK_DEFN_FAMILY }} \
           > "${RUNNER_TEMP}/task-definition.json"
         # Update task-definition with new image
-        cat "${RUNNER_TEMP}/task-definition.json"
+        cat "${RUNNER_TEMP}/task-definition.json" | jq '.'
 
     - name: Report cluster status
       run: |
