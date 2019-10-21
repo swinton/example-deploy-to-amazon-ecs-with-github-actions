@@ -66,7 +66,7 @@ jobs:
           > "${RUNNER_TEMP}/task-definition.json"
         # Update task-definition with new image
         export IMAGE="jekyll/jekyll:latest"
-        cat "${RUNNER_TEMP}/task-definition.json" | jq '.taskDefinition.containerDefinitions[0].image |= $ENV.IMAGE'
+        cat "${RUNNER_TEMP}/task-definition.json" | jq '.taskDefinition.containerDefinitions[0].image |= env.IMAGE'
 
     - name: Report cluster status
       run: |
