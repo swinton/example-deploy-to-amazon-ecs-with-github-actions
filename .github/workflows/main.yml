@@ -3,6 +3,11 @@ on:
 
 name: Build
 
+env:
+  AWS_REGION: eu-west-1
+  CLUSTER: jekyll-contained
+  SERVICE: jekyll-contained
+
 jobs:
   build:
     name: Build
@@ -18,8 +23,6 @@ jobs:
       uses: actions/checkout@v1.0.0
 
     - name: Setup AWS
-      env:
-        AWS_REGION: eu-west-1
       run: |
         mkdir "${RUNNER_TEMP}/.aws"
         export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
@@ -37,7 +40,6 @@ jobs:
         # Configure environment to use the runner's AWS config
         export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
         export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
-        export AWS_REGION=$( aws configure get default.region )
         # Build and tag the image
         docker build \
           -t jekyll-contained:$GITHUB_SHA \
@@ -55,14 +57,10 @@ jobs:
         path: ./jekyll-contained.tar.gz
 
     - name: Build, deploy task definition
-      env:
-        CLUSTER: jekyll-contained
-        SERVICE: jekyll-contained
       run: |
         # Configure environment to use the runner's AWS config
         export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
         export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
-        export AWS_REGION=$( aws configure get default.region )
         # Update task-definition with new image
         export IMAGE=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/jekyll-contained:$GITHUB_SHA
         cat .aws/task-definition.json \
@@ -76,26 +74,18 @@ jobs:
         aws ecs update-service --cluster $CLUSTER --service $SERVICE --task-definition $TASK_DEFINITION_ARN
 
     - name: Report cluster status
-      env:
-        CLUSTER: jekyll-contained
-        SERVICE: jekyll-contained
       run: |
         # Configure environment to use the runner's AWS config
         export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
         export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
-        export AWS_REGION=$( aws configure get default.region )
         # Wait for services to stabilize
         aws ecs wait services-stable --cluster $CLUSTER --services $SERVICE
 
     - name: Report public web address
-      env:
-        CLUSTER: jekyll-contained
-        SERVICE: jekyll-contained
       run: |
         # Configure environment to use the runner's AWS config
         export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
         export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
-        export AWS_REGION=$( aws configure get default.region )
         # Get the task ARN
         TASK_ARN=$( aws ecs list-tasks --cluster $CLUSTER | jq -r '.taskArns[0]' )
         # Get the network interface id
