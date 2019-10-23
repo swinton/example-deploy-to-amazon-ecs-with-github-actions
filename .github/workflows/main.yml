@@ -5,6 +5,8 @@ name: Build
 
 env:
   AWS_REGION: eu-west-1
+  AWS_CONFIG_FILE: ${{ runner.temp }}/.aws/config
+  AWS_SHARED_CREDENTIALS_FILE: ${{ runner.temp }}/.aws/credentials
   CLUSTER: jekyll-contained
   SERVICE: jekyll-contained
   CONTAINER_IMAGE: jekyll-contained:${{ github.sha }}
@@ -20,29 +22,19 @@ jobs:
     - name: Setup AWS
       run: |
         mkdir "${RUNNER_TEMP}/.aws"
-        export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
-        export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
         aws configure set default.region $AWS_REGION
         aws configure set default.output json
         aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws sts get-caller-identity
-        # Login to AWS ECR
-        $( aws ecr get-login --region $AWS_REGION --no-include-email )
 
     - name: Setup ECR
       run: |
-        # Configure environment to use the runner's AWS config
-        export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
-        export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
         # Login to AWS ECR
         $( aws ecr get-login --region $AWS_REGION --no-include-email )
 
     - name: Build, tag, and push image
       run: |
-        # Configure environment to use the runner's AWS config
-        export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
-        export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
         # Build and tag the image
         docker build \
           -t $CONTAINER_IMAGE \
@@ -63,9 +55,6 @@ jobs:
 
     - name: Register task definition
       run: |
-        # Configure environment to use the runner's AWS config
-        export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
-        export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
         # Register the new task-definition
         TASK_DEFINITION_ARN=$( aws ecs register-task-definition \
           --cli-input-json file://"${RUNNER_TEMP}/task-definition.json" \
@@ -75,17 +64,11 @@ jobs:
 
     - name: Wait for services to stabilize
       run: |
-        # Configure environment to use the runner's AWS config
-        export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
-        export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
         # Wait for services to stabilize
         aws ecs wait services-stable --cluster $CLUSTER --services $SERVICE
 
     - name: Report public web address
       run: |
-        # Configure environment to use the runner's AWS config
-        export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
-        export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
         # Get the task ARN
         TASK_ARN=$( aws ecs list-tasks --cluster $CLUSTER | jq -r '.taskArns[0]' )
         # Get the network interface id
