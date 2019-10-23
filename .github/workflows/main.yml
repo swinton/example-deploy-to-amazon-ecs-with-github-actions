@@ -13,12 +13,6 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-    - name: Context
-      env:
-        GITHUB_CONTEXT: ${{ toJson(github) }}
-      run: |
-        echo "$GITHUB_CONTEXT"
-
     - name: Checkout
       uses: actions/checkout@v1.0.0
 
@@ -32,6 +26,14 @@ jobs:
         aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws sts get-caller-identity
+        # Login to AWS ECR
+        $( aws ecr get-login --region $AWS_REGION --no-include-email )
+
+    - name: Setup ECR
+      run: |
+        # Configure environment to use the runner's AWS config
+        export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
+        export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
         # Login to AWS ECR
         $( aws ecr get-login --region $AWS_REGION --no-include-email )
 
@@ -50,22 +52,19 @@ jobs:
         # Push image to AWS ECR
         docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/jekyll-contained:$GITHUB_SHA
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v1.0.0
-      with:
-        name: docker-image
-        path: ./jekyll-contained.tar.gz
-
-    - name: Build, deploy task definition
+    - name: Render task definition
       run: |
-        # Configure environment to use the runner's AWS config
-        export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
-        export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
         # Update task-definition with new image
         export IMAGE=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/jekyll-contained:$GITHUB_SHA
         cat .aws/task-definition.json \
           | jq '.containerDefinitions[0].image |= env.IMAGE' \
           > "${RUNNER_TEMP}/task-definition.json"
+
+    - name: Register task definition
+      run: |
+        # Configure environment to use the runner's AWS config
+        export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
+        export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
         # Register the new task-definition
         TASK_DEFINITION_ARN=$( aws ecs register-task-definition \
           --cli-input-json file://"${RUNNER_TEMP}/task-definition.json" \
@@ -73,7 +72,7 @@ jobs:
         # Deploy new task definition to the existing service
         aws ecs update-service --cluster $CLUSTER --service $SERVICE --task-definition $TASK_DEFINITION_ARN
 
-    - name: Report cluster status
+    - name: Wait for services to stabilize
       run: |
         # Configure environment to use the runner's AWS config
         export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
