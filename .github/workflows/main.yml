@@ -5,6 +5,7 @@ name: Build
 
 env:
   AWS_REGION: eu-west-1
+  AWS_HOME: ${{ runner.temp }}/.aws
   AWS_CONFIG_FILE: ${{ runner.temp }}/.aws/config
   AWS_SHARED_CREDENTIALS_FILE: ${{ runner.temp }}/.aws/credentials
   CLUSTER: jekyll-contained
@@ -21,7 +22,7 @@ jobs:
 
     - name: Setup AWS
       run: |
-        mkdir "${RUNNER_TEMP}/.aws"
+        mkdir -p "${AWS_HOME}"
         aws configure set default.region $AWS_REGION
         aws configure set default.output json
         aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
