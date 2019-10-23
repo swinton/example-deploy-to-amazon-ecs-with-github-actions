@@ -5,9 +5,6 @@ name: Build
 
 env:
   AWS_REGION: eu-west-1
-  AWS_HOME: ${{ runner.temp }}/.aws
-  AWS_CONFIG_FILE: ${{ runner.temp }}/.aws/config
-  AWS_SHARED_CREDENTIALS_FILE: ${{ runner.temp }}/.aws/credentials
   CLUSTER: jekyll-contained
   SERVICE: jekyll-contained
   CONTAINER_IMAGE: jekyll-contained:${{ github.sha }}
@@ -16,6 +13,10 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    env:
+      AWS_HOME: ${{ runner.temp }}/.aws
+      AWS_CONFIG_FILE: ${{ runner.temp }}/.aws/config
+      AWS_SHARED_CREDENTIALS_FILE: ${{ runner.temp }}/.aws/credentials
     steps:
     - name: Checkout
       uses: actions/checkout@v1.0.0
