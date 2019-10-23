@@ -7,6 +7,7 @@ env:
   AWS_REGION: eu-west-1
   CLUSTER: jekyll-contained
   SERVICE: jekyll-contained
+  CONTAINER_IMAGE: jekyll-contained:${{ github.sha }}
 
 jobs:
   build:
@@ -44,18 +45,18 @@ jobs:
         export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
         # Build and tag the image
         docker build \
-          -t jekyll-contained:$GITHUB_SHA \
+          -t $CONTAINER_IMAGE \
           -t $GITHUB_REPOSITORY:$GITHUB_SHA \
-          -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/jekyll-contained:$GITHUB_SHA .
+          -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$CONTAINER_IMAGE .
         # Save the image so it can be uploaded as an artifact
-        docker save jekyll-contained:$GITHUB_SHA | gzip > ./jekyll-contained.tar.gz
+        docker save $CONTAINER_IMAGE | gzip > ./jekyll-contained.tar.gz
         # Push image to AWS ECR
-        docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/jekyll-contained:$GITHUB_SHA
+        docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$CONTAINER_IMAGE
 
     - name: Render task definition
       run: |
         # Update task-definition with new image
-        export IMAGE=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/jekyll-contained:$GITHUB_SHA
+        export IMAGE=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$CONTAINER_IMAGE
         cat .aws/task-definition.json \
           | jq '.containerDefinitions[0].image |= env.IMAGE' \
           > "${RUNNER_TEMP}/task-definition.json"
