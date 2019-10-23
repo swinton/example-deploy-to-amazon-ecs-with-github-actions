@@ -24,7 +24,7 @@ jobs:
         AWS_SHARED_CREDENTIALS_FILE: ${{ runner.temp }}/.aws/credentials
       run: |
         mkdir -p "${AWS_HOME}"
-        # HACK: Officially we should be using core.exportVariable(...) via Node
+        # ::set-env will propogate these env vars to subsequents steps in this job
         echo "::set-env name=AWS_CONFIG_FILE,::${AWS_CONFIG_FILE}"
         echo "::set-env name=AWS_SHARED_CREDENTIALS_FILE,::${AWS_SHARED_CREDENTIALS_FILE}"
         aws configure set default.region $AWS_REGION
