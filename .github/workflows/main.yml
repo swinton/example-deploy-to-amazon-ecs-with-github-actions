@@ -55,6 +55,9 @@ jobs:
         path: ./jekyll-contained.tar.gz
 
     - name: Build, deploy task definition
+      env:
+        CLUSTER: jekyll-contained
+        SERVICE: jekyll-contained
       run: |
         # Configure environment to use the runner's AWS config
         export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
@@ -66,9 +69,38 @@ jobs:
           | jq '.containerDefinitions[0].image |= env.IMAGE' \
           > "${RUNNER_TEMP}/task-definition.json"
         # Register the new task-definition
-        aws ecs register-task-definition \
-          --cli-input-json file://"${RUNNER_TEMP}/task-definition.json"
+        TASK_DEFINITION_ARN=$( aws ecs register-task-definition \
+          --cli-input-json file://"${RUNNER_TEMP}/task-definition.json" \
+          | jq -r '.taskDefinition.taskDefinitionArn' )
+        # Deploy new task definition to the existing service
+        aws ecs update-service --cluster $CLUSTER --service $SERVICE --task-definition $TASK_DEFINITION_ARN
 
     - name: Report cluster status
+      env:
+        CLUSTER: jekyll-contained
+        SERVICE: jekyll-contained
       run: |
-        echo TODO
+        # Configure environment to use the runner's AWS config
+        export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
+        export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
+        export AWS_REGION=$( aws configure get default.region )
+        # Wait for services to stabilize
+        aws ecs wait services-stable --cluster $CLUSTER --services $SERVICE
+
+    - name: Report public web address
+      env:
+        CLUSTER: jekyll-contained
+        SERVICE: jekyll-contained
+      run: |
+        # Configure environment to use the runner's AWS config
+        export AWS_CONFIG_FILE="${RUNNER_TEMP}/.aws/config"
+        export AWS_SHARED_CREDENTIALS_FILE="${RUNNER_TEMP}/.aws/credentials"
+        export AWS_REGION=$( aws configure get default.region )
+        # Get the task ARN
+        TASK_ARN=$( aws ecs list-tasks --cluster $CLUSTER | jq -r '.taskArns[0]' )
+        # Get the network interface id
+        NETWORK_INTERFACE_ID=$( aws ecs describe-tasks --cluster $CLUSTER --tasks $TASK_ARN \
+          | jq -r '.tasks[0].attachments[0].details[] | select(.name == "networkInterfaceId") | .value' )
+        # Get the public IP etc
+        aws ec2 describe-network-interfaces --network-interface-ids $NETWORK_INTERFACE_ID \
+          | jq -r '.NetworkInterfaces[0].Association | .PublicDnsName, .PublicIp'
