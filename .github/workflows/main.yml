@@ -24,16 +24,14 @@ jobs:
         AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
         AWS_ROLE_EXTERNAL_ID: ${{ secrets.AWS_ROLE_EXTERNAL_ID }}
       run: |
-        # register the session token secret with the runner to ensure it is masked in logs
-        echo "::add-mask::AWS_SESSION_TOKEN"
-
         # generate a session token
         AWS_SESSION_TOKEN=$( aws sts assume-role \
           --role-arn $AWS_ROLE_ARN \
           --role-session-name $GITHUB_SHA \
           --external-id $AWS_ROLE_EXTERNAL_ID | jq '.Credentials.SessionToken' --raw-output )
 
-        echo "AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}"
+        # register the session token secret with the runner to ensure it is masked in logs
+        echo "::add-mask::${AWS_SESSION_TOKEN}"
 
         # ::set-env will propogate these env vars to subsequents steps in this job
         echo "::set-env name=AWS_ACCESS_KEY_ID,::${{ secrets.AWS_ACCESS_KEY_ID }}"
