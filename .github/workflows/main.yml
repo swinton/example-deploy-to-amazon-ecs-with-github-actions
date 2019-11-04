@@ -18,19 +18,18 @@ jobs:
       uses: actions/checkout@v1.0.0
 
     - name: Setup AWS
-      env:
-        AWS_HOME: ${{ runner.temp }}/.aws
-        AWS_CONFIG_FILE: ${{ runner.temp }}/.aws/config
-        AWS_SHARED_CREDENTIALS_FILE: ${{ runner.temp }}/.aws/credentials
       run: |
-        mkdir -p "${AWS_HOME}"
+        # register the secret with the runner to ensure it is masked in logs
+        echo "::add-mask::AWS_ACCESS_KEY_ID"
+        echo "::add-mask::AWS_SECRET_ACCESS_KEY"
+        echo "::add-mask::AWS_SESSION_TOKEN"
+
         # ::set-env will propogate these env vars to subsequents steps in this job
-        echo "::set-env name=AWS_CONFIG_FILE,::${AWS_CONFIG_FILE}"
-        echo "::set-env name=AWS_SHARED_CREDENTIALS_FILE,::${AWS_SHARED_CREDENTIALS_FILE}"
-        aws configure set default.region $AWS_REGION
-        aws configure set default.output json
-        aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        echo "::set-env name=AWS_ACCESS_KEY_ID,::${{ secrets.AWS_ACCESS_KEY_ID }}"
+        echo "::set-env name=AWS_SECRET_ACCESS_KEY,::${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+        echo "::set-env name=AWS_DEFAULT_REGION,::${AWS_REGION}"
+        echo "::set-env name=AWS_DEFAULT_OUTPUT,::json"
+
         aws sts get-caller-identity
 
     - name: Setup ECR
