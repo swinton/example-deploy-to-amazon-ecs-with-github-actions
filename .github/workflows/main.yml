@@ -1,7 +1,9 @@
-on:
-  [push, pull_request]
-
 name: Build
+
+on:
+  pull_request:
+  push:
+    branches: master
 
 env:
   AWS_REGION: eu-west-1
