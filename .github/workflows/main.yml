@@ -1,7 +1,9 @@
-on:
-  [push, pull_request]
-
 name: Build
+
+on:
+  pull_request:
+  push:
+    branches: master
 
 env:
   AWS_REGION: eu-west-1
@@ -19,18 +21,34 @@ jobs:
 
     - name: Setup AWS
       env:
-        AWS_HOME: ${{ runner.temp }}/.aws
-        AWS_CONFIG_FILE: ${{ runner.temp }}/.aws/config
-        AWS_SHARED_CREDENTIALS_FILE: ${{ runner.temp }}/.aws/credentials
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+        AWS_ROLE_EXTERNAL_ID: ${{ secrets.AWS_ROLE_EXTERNAL_ID }}
       run: |
-        mkdir -p "${AWS_HOME}"
+        # generate credentials
+        AWS_CREDENTIALS=$( aws sts assume-role \
+          --role-arn $AWS_ROLE_ARN \
+          --role-session-name $GITHUB_SHA \
+          --external-id $AWS_ROLE_EXTERNAL_ID )
+        AWS_ACCESS_KEY_ID=$( echo "${AWS_CREDENTIALS}" | jq '.Credentials.AccessKeyId' -r )
+        AWS_SECRET_ACCESS_KEY=$( echo "${AWS_CREDENTIALS}" | jq '.Credentials.SecretAccessKey' -r )
+        AWS_SESSION_TOKEN=$( echo "${AWS_CREDENTIALS}" | jq '.Credentials.SessionToken' -r )
+
+        # register credentials with the runner to ensure they are masked in logs
+        echo "::add-mask::${AWS_ACCESS_KEY_ID}"
+        echo "::add-mask::${AWS_SECRET_ACCESS_KEY}"
+        echo "::add-mask::${AWS_SESSION_TOKEN}"
+
         # ::set-env will propogate these env vars to subsequents steps in this job
-        echo "::set-env name=AWS_CONFIG_FILE,::${AWS_CONFIG_FILE}"
-        echo "::set-env name=AWS_SHARED_CREDENTIALS_FILE,::${AWS_SHARED_CREDENTIALS_FILE}"
-        aws configure set default.region $AWS_REGION
-        aws configure set default.output json
-        aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        echo "::set-env name=AWS_ACCESS_KEY_ID,::${AWS_ACCESS_KEY_ID}"
+        echo "::set-env name=AWS_SECRET_ACCESS_KEY,::${AWS_SECRET_ACCESS_KEY}"
+        echo "::set-env name=AWS_SESSION_TOKEN,::${AWS_SESSION_TOKEN}"
+        echo "::set-env name=AWS_DEFAULT_REGION,::${AWS_REGION}"
+        echo "::set-env name=AWS_DEFAULT_OUTPUT,::json"
+
+    - name: Verify identity
+      run: |
         aws sts get-caller-identity
 
     - name: Setup ECR
