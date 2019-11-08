@@ -1,102 +1,55 @@
-name: Build
-
 on:
   pull_request:
   push:
-    branches: master
+    branches:
+      - master
 
-env:
-  AWS_REGION: eu-west-1
-  CLUSTER: jekyll-contained
-  SERVICE: jekyll-contained
-  CONTAINER_IMAGE: jekyll-contained:${{ github.sha }}
+name: Deploy to Amazon ECS
 
 jobs:
-  build:
-    name: Build
+  deploy:
+    name: Deploy
     runs-on: ubuntu-latest
+    env:
+      ECR_REPOSITORY: jekyll-contained
+
     steps:
     - name: Checkout
-      uses: actions/checkout@v1.0.0
+      uses: actions/checkout@v1
 
-    - name: Setup AWS
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials-for-github-actions@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: eu-west-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login-for-github-actions@v1
+
+    - name: Build, tag, and push image to Amazon ECR
+      id: build-image
       env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-        AWS_ROLE_EXTERNAL_ID: ${{ secrets.AWS_ROLE_EXTERNAL_ID }}
+        ECR_IMAGE: "${{ steps.login-ecr.outputs.registry }}:${{ env.ECR_REPOSITORY}}/${{ github.sha }}"
       run: |
-        # generate credentials
-        AWS_CREDENTIALS=$( aws sts assume-role \
-          --role-arn $AWS_ROLE_ARN \
-          --role-session-name $GITHUB_SHA \
-          --external-id $AWS_ROLE_EXTERNAL_ID )
-        AWS_ACCESS_KEY_ID=$( echo "${AWS_CREDENTIALS}" | jq '.Credentials.AccessKeyId' -r )
-        AWS_SECRET_ACCESS_KEY=$( echo "${AWS_CREDENTIALS}" | jq '.Credentials.SecretAccessKey' -r )
-        AWS_SESSION_TOKEN=$( echo "${AWS_CREDENTIALS}" | jq '.Credentials.SessionToken' -r )
+        # Build a container and push it to ECR
+        docker build -t $ECR_IMAGE .
+        docker push $ECR_IMAGE
+        echo "::set-output name=image::$ECR_IMAGE"
 
-        # register credentials with the runner to ensure they are masked in logs
-        echo "::add-mask::${AWS_ACCESS_KEY_ID}"
-        echo "::add-mask::${AWS_SECRET_ACCESS_KEY}"
-        echo "::add-mask::${AWS_SESSION_TOKEN}"
+    - name: Fill in the new image ID in the Amazon ECS task definition
+      id: task-def
+      uses: aws-actions/amazon-ecs-render-task-definition-for-github-actions@v1
+      with:
+        task-definition: .aws/task-definition.json
+        container-name: jekyll-contained
+        image: ${{ steps.build-image.outputs.image }}
 
-        # ::set-env will propogate these env vars to subsequents steps in this job
-        echo "::set-env name=AWS_ACCESS_KEY_ID,::${AWS_ACCESS_KEY_ID}"
-        echo "::set-env name=AWS_SECRET_ACCESS_KEY,::${AWS_SECRET_ACCESS_KEY}"
-        echo "::set-env name=AWS_SESSION_TOKEN,::${AWS_SESSION_TOKEN}"
-        echo "::set-env name=AWS_DEFAULT_REGION,::${AWS_REGION}"
-        echo "::set-env name=AWS_DEFAULT_OUTPUT,::json"
-
-    - name: Verify identity
-      run: |
-        aws sts get-caller-identity
-
-    - name: Setup ECR
-      run: |
-        # Login to AWS ECR
-        $( aws ecr get-login --region $AWS_REGION --no-include-email )
-
-    - name: Build, tag, and push image
-      run: |
-        # Build and tag the image
-        docker build \
-          -t $CONTAINER_IMAGE \
-          -t $GITHUB_REPOSITORY:$GITHUB_SHA \
-          -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$CONTAINER_IMAGE .
-        # Save the image so it can be uploaded as an artifact
-        docker save $CONTAINER_IMAGE | gzip > ./jekyll-contained.tar.gz
-        # Push image to AWS ECR
-        docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$CONTAINER_IMAGE
-
-    - name: Render task definition
-      run: |
-        # Update task-definition with new image
-        export IMAGE=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$CONTAINER_IMAGE
-        cat .aws/task-definition.json \
-          | jq '.containerDefinitions[0].image |= env.IMAGE' \
-          > "${RUNNER_TEMP}/task-definition.json"
-
-    - name: Register task definition
-      run: |
-        # Register the new task-definition
-        TASK_DEFINITION_ARN=$( aws ecs register-task-definition \
-          --cli-input-json file://"${RUNNER_TEMP}/task-definition.json" \
-          | jq -r '.taskDefinition.taskDefinitionArn' )
-        # Deploy new task definition to the existing service
-        aws ecs update-service --cluster $CLUSTER --service $SERVICE --task-definition $TASK_DEFINITION_ARN
-
-    - name: Wait for services to stabilize
-      run: |
-        # Wait for services to stabilize
-        aws ecs wait services-stable --cluster $CLUSTER --services $SERVICE
-
-    - name: Report public web address
-      run: |
-        # Get the task ARN
-        TASK_ARN=$( aws ecs list-tasks --cluster $CLUSTER | jq -r '.taskArns[0]' )
-        # Get the network interface id
-        NETWORK_INTERFACE_ID=$( aws ecs describe-tasks --cluster $CLUSTER --tasks $TASK_ARN \
-          | jq -r '.tasks[0].attachments[0].details[] | select(.name == "networkInterfaceId") | .value' )
-        # Get the public IP etc
-        aws ec2 describe-network-interfaces --network-interface-ids $NETWORK_INTERFACE_ID \
-          | jq -r '.NetworkInterfaces[0].Association | .PublicDnsName, .PublicIp'
+    - name: Deploy Amazon ECS task definition
+      uses: aws-actions/amazon-ecs-deploy-task-definition-for-github-actions@v1
+      with:
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        service: jekyll-contained
+        cluster: jekyll-contained
+        wait-for-service-stability: true
