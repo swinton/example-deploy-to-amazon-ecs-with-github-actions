@@ -30,9 +30,6 @@ jobs:
         echo "::set-env name=AWS_DEFAULT_REGION,::${AWS_REGION}"
         echo "::set-env name=AWS_DEFAULT_OUTPUT,::json"
 
-    - run: |
-        aws sts get-caller-identity
-
     - name: Login to Amazon ECR
       run: |
         # Login to AWS ECR
