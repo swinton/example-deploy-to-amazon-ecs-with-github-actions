@@ -1,6 +1,6 @@
 # `example-deploy-to-amazon-ecs-with-github-actions`
 
-> :package: An example deployment of a [Jekyll](https://jekyllrb.com/)-powered blog to Amazon ECS with GitHub Actions.
+> :package: :rocket: An example deployment of a [**Jekyll**](https://jekyllrb.com/)-powered blog to [**Amazon ECS**](https://aws.amazon.com/ecs/) with [**GitHub Actions**](https://github.com/features/actions).
 
 <a href="https://github.com/swinton/jekyll-contained"><img alt="GitHub Actions status" src="https://github.com/swinton/jekyll-contained/workflows/Build/badge.svg"></a>
 
