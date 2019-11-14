@@ -28,6 +28,7 @@ on:
   push:
     branches:
       - master
+  pull_request:
 
 name: Deploy to Amazon ECS
 
@@ -75,6 +76,7 @@ jobs:
 
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      if: startsWith( github.ref, 'refs/head/master' )
       with:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
         service: sample-app-service
