@@ -1,4 +1,4 @@
-# `example-deploy-to-amazon-ecs-with-github-actions`
+# `deploy-to-amazon-ecs-with-github-actions`
 
 > :package: :rocket: An example deployment of a [**Jekyll**](https://jekyllrb.com/)-powered blog to [**Amazon ECS**](https://aws.amazon.com/ecs/) with [**GitHub Actions**](https://github.com/features/actions).
 
