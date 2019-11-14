@@ -1,20 +1,23 @@
-# `jekyll-contained`
+# `example-deploy-to-amazon-ecs-with-github-actions`
 
-> :package: A contained version of [Jekyll](https://jekyllrb.com/).
+> :package: An example deployment of a [Jekyll](https://jekyllrb.com/)-powered blog to Amazon ECS with GitHub Actions.
 
 <a href="https://github.com/swinton/jekyll-contained"><img alt="GitHub Actions status" src="https://github.com/swinton/jekyll-contained/workflows/Build/badge.svg"></a>
 
 ![jekyll-contained](https://user-images.githubusercontent.com/27806/67113157-6c8fc900-f19e-11e9-92ab-4106ef5ad22d.png)
 
-## Usage
+## Overview
 
-```shell
-# Build the container image
-docker build -t blog .
+The [workflow](.github/workflows/main.yml) will build a Jekyll [blog](blog/), in a container, on every Pull Request, and will update an Amazon ECS service with the new container image on every push to `master`.
 
-# Run the container
-docker run --name myblog --rm -p 3000:4000 -it blog  # Blog will be running at http://localhost:3000/
-```
+## Actions
+
+The workflow uses the following actions from AWS:
+
+1. [`aws-actions/configure-aws-credentials`](https://github.com/marketplace/actions/configure-aws-credentials-action-for-github-actions)
+1. [`aws-actions/amazon-ecr-login`](https://github.com/marketplace/actions/amazon-ecr-login-action-for-github-actions)
+1. [`aws-actions/amazon-ecs-render-task-definition`](https://github.com/marketplace/actions/amazon-ecs-render-task-definition-action-for-github-actions)
+1. [`aws-actions/amazon-ecs-deploy-task-definition`](https://github.com/marketplace/actions/amazon-ecs-deploy-task-definition-action-for-github-actions)
 
 ## Inspiration
 
